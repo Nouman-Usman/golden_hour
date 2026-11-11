@@ -239,3 +239,20 @@ export async function changeOrderStatus(db: Db, actor: StaffRecord, input: Order
     await tx.insert(orderEvents).values({ orderId, fromStatus: from, toStatus: to, staffUserId, note: note ?? null });
   });
 }
+
+export const NOTES_MAX = 2000;
+
+export async function setOrderNotes(db: Db, actor: StaffRecord, input: { orderId: string; notes: string }): Promise<void> {
+  authorize(actor, "orders.manage");
+  if (typeof input.orderId !== "string" || !isUuid(input.orderId)) throw new DomainError("not_found", "Order not found.");
+  const notes = input.notes.trim();
+  if (notes.length > NOTES_MAX) {
+    throw new DomainError("invalid_input", "Keep notes under 2000 characters.", { notes: "Keep notes under 2000 characters." });
+  }
+  const done = await db
+    .update(orders)
+    .set({ notes, updatedAt: new Date() })
+    .where(eq(orders.id, input.orderId))
+    .returning({ id: orders.id });
+  if (!done.length) throw new DomainError("not_found", "Order not found.");
+}

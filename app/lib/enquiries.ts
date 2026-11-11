@@ -120,3 +120,24 @@ export function enquiryWhatsAppUrl(
   if (e.message) lines.push(`Message: ${e.message}`);
   return `https://wa.me/${ownerWhatsApp.replace(/\D/g, "")}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
+
+export async function setEnquiryNotes(
+  db: Db,
+  actor: StaffRecord,
+  input: { enquiryId: string; notes: string },
+): Promise<void> {
+  authorize(actor, "enquiries.manage");
+  if (typeof input.enquiryId !== "string" || !isUuid(input.enquiryId)) {
+    throw new DomainError("not_found", "Enquiry not found.");
+  }
+  const notes = input.notes.trim();
+  if (notes.length > 2000) {
+    throw new DomainError("invalid_input", "Keep notes under 2000 characters.", { notes: "Keep notes under 2000 characters." });
+  }
+  const done = await db
+    .update(enquiries)
+    .set({ notes })
+    .where(eq(enquiries.id, input.enquiryId))
+    .returning({ id: enquiries.id });
+  if (!done.length) throw new DomainError("not_found", "Enquiry not found.");
+}
