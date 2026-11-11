@@ -45,7 +45,7 @@ export function ImageUploader({ productId, full }: { productId: string; full: bo
       </label>
       <p className="text-xs text-ash">JPEG, PNG or WebP, up to 5 MB.</p>
       {msg && (
-        <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-brass-light" : "text-lamp"}`}>
+        <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-ok" : "text-danger"}`}>
           {msg.text}
         </p>
       )}

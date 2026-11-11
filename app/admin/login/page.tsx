@@ -25,13 +25,24 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ reason?:
 
 export default function LoginPage({ searchParams }: { searchParams: Promise<{ reason?: string }> }) {
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center px-4 py-16">
-      <p className="brass font-display text-5xl font-black uppercase leading-none">Golden Hour</p>
-      <h1 className="mt-2 text-lg text-bone/75">Admin sign in</h1>
-      <div className="mt-10">
-        <Suspense fallback={<p className="text-ash">Loading…</p>}>
-          <LoginContent searchParams={searchParams} />
-        </Suspense>
+    <main className="grid min-h-svh place-items-center bg-matte px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-xl bg-brass font-display text-xl font-black text-matte">GH</span>
+          <span className="leading-tight">
+            <span className="block font-display text-2xl font-bold">Golden Hour</span>
+            <span className="block text-sm text-ash">Admin</span>
+          </span>
+        </div>
+        <div className="rounded-2xl border border-line bg-matte-2 p-5 sm:p-6">
+          <h1 className="text-lg font-semibold">Sign in</h1>
+          <p className="mt-1 text-sm text-ash">Use the email and password the owner gave you.</p>
+          <div className="mt-6">
+            <Suspense fallback={<p className="text-ash">Loading…</p>}>
+              <LoginContent searchParams={searchParams} />
+            </Suspense>
+          </div>
+        </div>
       </div>
     </main>
   );

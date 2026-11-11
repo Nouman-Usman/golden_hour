@@ -102,8 +102,8 @@ export function PushToggle({ banner = false }: { banner?: boolean }) {
   };
 
   return (
-    <div className={`grid gap-3 ${banner ? "rounded-2xl border border-brass/50 p-4" : ""}`}>
-      <p className="text-bone/85">{text[state]}</p>
+    <div className={`grid gap-3 ${banner ? "rounded-2xl border border-brass/40 bg-brass/10 p-4 sm:flex sm:items-center sm:justify-between" : ""}`}>
+      <p className="text-sm text-bone/85">{text[state]}</p>
       {state === "off" && (
         <button onClick={turnOn} disabled={busy} className="btn btn-sm btn-brass w-fit">
           {busy ? "Turning on…" : "Turn on notifications"}
@@ -114,7 +114,7 @@ export function PushToggle({ banner = false }: { banner?: boolean }) {
           Turn off
         </button>
       )}
-      {msg && <p className="text-sm text-brass-light">{msg}</p>}
+      {msg && <p className="text-sm text-bone/75">{msg}</p>}
     </div>
   );
 }

@@ -8,7 +8,7 @@ export function StockForm({ productId, variantId, stock }: { productId: string; 
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={variantId} />
       <label className="block w-24">
-        <span className="text-xs text-ash">In stock</span>
+        <span className="text-sm font-medium text-bone/80">In stock</span>
         <input name="stock" type="number" inputMode="numeric" min={0} step={1} defaultValue={stock} required className={input} />
       </label>
     </ActionForm>

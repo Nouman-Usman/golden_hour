@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireStaffPage } from "../../guard.ts";
 import { PushToggle } from "../push-toggle";
+import { Card, PageHeader } from "../ui";
 import { PasswordForm } from "./password-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -9,21 +10,28 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 async function AccountContent() {
   const staff = await requireStaffPage();
   return (
-    <div className="grid max-w-md gap-8">
-      <div>
-        <h1 className="font-display text-4xl font-bold uppercase">Account</h1>
-        <p className="mt-2 text-bone/75">
-          {staff.name} · {staff.email} · {staff.role === "owner" ? "Owner" : "Front desk"}
-        </p>
+    <div className="max-w-2xl">
+      <PageHeader title="Account" />
+      <div className="grid gap-4">
+        <Card>
+          <div className="flex items-center gap-4">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brass font-display text-xl font-bold text-matte" aria-hidden>
+              {staff.name.trim().charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold">{staff.name}</p>
+              <p className="truncate text-sm text-ash">{staff.email}</p>
+              <p className="text-sm text-bone/75">{staff.role === "owner" ? "Owner" : "Front desk"}</p>
+            </div>
+          </div>
+        </Card>
+        <Card title="Notifications on this device">
+          <PushToggle />
+        </Card>
+        <Card title="Change password">
+          <PasswordForm />
+        </Card>
       </div>
-      <section className="grid gap-4">
-        <h2 className="font-display text-2xl font-bold">Notifications on this device</h2>
-        <PushToggle />
-      </section>
-      <section className="grid gap-4">
-        <h2 className="font-display text-2xl font-bold">Change password</h2>
-        <PasswordForm />
-      </section>
     </div>
   );
 }

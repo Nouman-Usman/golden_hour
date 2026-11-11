@@ -17,7 +17,7 @@ export function ConfirmButton({ action, label, fields }: { action: Action; label
       ))}
       {armed ? (
         <>
-          <button disabled={pending} className="btn btn-sm bg-lamp text-matte">
+          <button disabled={pending} className="btn btn-sm bg-danger text-matte">
             Yes, {label.toLowerCase()}
           </button>
           <button type="button" onClick={() => setArmed(false)} className="btn btn-sm btn-outline">

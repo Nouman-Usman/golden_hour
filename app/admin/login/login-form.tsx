@@ -11,7 +11,7 @@ export function LoginForm({ notice }: { notice?: string }) {
   const error = state && !state.ok ? state.error : notice;
 
   return (
-    <form action={action} className="grid gap-6">
+    <form action={action} className="grid gap-5">
       <label className="block">
         <span className="text-sm font-medium text-bone/80">Email</span>
         <input name="email" type="email" autoComplete="username" required className={field} />
