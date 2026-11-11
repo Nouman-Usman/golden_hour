@@ -6,7 +6,7 @@ import { staff } from "../db/schema.ts";
 import { DomainError } from "../app/lib/errors.ts";
 import { authorize, type StaffRecord } from "../app/lib/permissions.ts";
 import {
-  createStaff, setStaffActive, setStaffRole, resetStaffPassword, reconcileStaff, type AuthAdmin,
+  createStaff, setStaffActive, setStaffRole, resetStaffPassword, reconcileStaff, EMAIL, type AuthAdmin,
 } from "../app/lib/staff.ts";
 
 function fakeAdmin(failing: Partial<Record<keyof AuthAdmin, boolean>> = {}, users: string[] = []) {
@@ -142,9 +142,13 @@ test("last active owner cannot be demoted or deactivated", async () => {
 });
 
 test("cannot change own role or deactivate self, even as owner", async () => {
-  const { db, admin } = { ...(await setup()), ...fakeAdmin() };
-  await assert.rejects(setStaffRole(db, owner, OWNER_ID, "front_desk"), { code: "forbidden" });
-  await assert.rejects(setStaffActive(db, admin, owner, OWNER_ID, false), { code: "forbidden" });
+  const { db, close, admin } = { ...(await setup()), ...fakeAdmin() };
+  try {
+    await assert.rejects(setStaffRole(db, owner, OWNER_ID, "front_desk"), { code: "forbidden" });
+    await assert.rejects(setStaffActive(db, admin, owner, OWNER_ID, false), { code: "forbidden" });
+  } finally {
+    await close();
+  }
 });
 
 test("reset password calls Auth; unknown user is not_found", async () => {
@@ -167,4 +171,84 @@ test("reconcile finds orphans and rebans inactive staff", async () => {
   assert.deepEqual(res, { orphanAuthUsers: [orphan], rebanned: [id] });
   assert.deepEqual(calls.filter((c) => c[0] === "setBanned"), [["setBanned", id, true]]);
   await close();
+});
+
+
+// --- Plan 2, Task 8: fresh actor checks, sign-out stamps, reconcile resilience ---
+
+const OTHER_OWNER = "22222222-2222-4222-8222-222222222222";
+const DESK = "33333333-3333-4333-8333-333333333333";
+async function setupMany() {
+  const t = await setup();
+  await t.db.insert(staff).values([
+    { userId: OTHER_OWNER, name: "Owner 2", email: "o2@x.pk", role: "owner" },
+    { userId: DESK, name: "Desk", email: "d@x.pk", role: "front_desk" },
+  ]);
+  return t;
+}
+const staleOps = (admin: AuthAdmin) => ({
+  createStaff: (db: Parameters<typeof createStaff>[0]) => createStaff(db, admin, owner, { ...input, email: "new@x.pk" }),
+  setStaffRole: (db: Parameters<typeof createStaff>[0]) => setStaffRole(db, owner, DESK, "owner"),
+  setStaffActive: (db: Parameters<typeof createStaff>[0]) => setStaffActive(db, admin, owner, DESK, false),
+  resetStaffPassword: (db: Parameters<typeof createStaff>[0]) => resetStaffPassword(db, admin, owner, DESK, "anotherlong1"),
+});
+
+for (const change of ["demoted", "deactivated"] as const) {
+  for (const op of ["createStaff", "setStaffRole", "setStaffActive", "resetStaffPassword"] as const) {
+    test(`${op}: an actor ${change} since sign-in is refused before any Auth call`, async () => {
+      const { db, close } = await setupMany();
+      try {
+        // The caller still holds an "owner, active" StaffRecord, but the DB says otherwise now.
+        await db
+          .update(staff)
+          .set(change === "demoted" ? { role: "front_desk" } : { active: false })
+          .where(eq(staff.userId, OWNER_ID));
+        const { admin, calls } = fakeAdmin();
+        await assert.rejects(staleOps(admin)[op](db), { code: "forbidden" });
+        assert.deepEqual(calls, []);
+      } finally {
+        await close();
+      }
+    });
+  }
+}
+
+test("deactivate, demotion and password reset stamp sessionsValidAfter", async () => {
+  const { db, close } = await setupMany();
+  try {
+    const { admin } = fakeAdmin();
+    assert.equal((await row(db, DESK)).sessionsValidAfter, null);
+    await resetStaffPassword(db, admin, owner, DESK, "anotherlong1");
+    const afterReset = (await row(db, DESK)).sessionsValidAfter;
+    assert.ok(afterReset instanceof Date);
+
+    assert.equal((await row(db, OTHER_OWNER)).sessionsValidAfter, null);
+    await setStaffRole(db, owner, OTHER_OWNER, "front_desk");
+    assert.ok((await row(db, OTHER_OWNER)).sessionsValidAfter instanceof Date);
+
+    await db.update(staff).set({ sessionsValidAfter: null }).where(eq(staff.userId, DESK));
+    await setStaffActive(db, admin, owner, DESK, false);
+    assert.ok((await row(db, DESK)).sessionsValidAfter instanceof Date);
+  } finally {
+    await close();
+  }
+});
+
+test("reconcile records a per-row ban failure and keeps going", async () => {
+  const { db, close } = await setupMany();
+  try {
+    await db.update(staff).set({ active: false }).where(eq(staff.userId, DESK));
+    await db.update(staff).set({ active: false }).where(eq(staff.userId, OTHER_OWNER));
+    const { admin } = fakeAdmin({ setBanned: true });
+    const r = await reconcileStaff(db, admin);
+    assert.deepEqual(r.rebanned, []);
+    assert.deepEqual(new Set(r.failed), new Set([DESK, OTHER_OWNER]));
+  } finally {
+    await close();
+  }
+});
+
+test("EMAIL accepts normal addresses and rejects junk", () => {
+  assert.ok(EMAIL.test("noumanmughal0123@gmail.com"));
+  for (const bad of ["", "no-at", "a@b", "a @b.c", "@b.c"]) assert.ok(!EMAIL.test(bad), bad);
 });

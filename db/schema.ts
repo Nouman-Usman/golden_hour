@@ -51,6 +51,8 @@ export const staff = pgTable(
     email: text().notNull(), // stored lowercased
     role: staffRole().notNull(),
     active: boolean().notNull().default(true),
+    // Sign-ins that started before this are refused (password reset, demotion, deactivation).
+    sessionsValidAfter: timestamp({ withTimezone: true }),
     createdAt: ts(),
     updatedAt: updated(),
   },

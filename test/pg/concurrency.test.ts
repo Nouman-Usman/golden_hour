@@ -128,3 +128,40 @@ test("same enquiry key from two connections stores once", async () => {
     assert.equal(n, 1);
   }
 });
+
+test("concurrent product creates with the same name get distinct slugs", async () => {
+  const [a, b, c, check] = [conn(), conn(), conn(), conn()];
+  const owner = await seedStaff(check);
+  const { createProduct } = await import("../../app/lib/products.ts");
+  const { products } = await import("../../db/schema.ts");
+  for (let i = 0; i < 5; i++) {
+    const name = `Creatine ${i}`;
+    const r = await Promise.allSettled([a, b, c].map((db) => createProduct(db, owner, { name, description: "", category: "Creatine" })));
+    assert.ok(r.every((x) => x.status === "fulfilled"), JSON.stringify(r));
+    const slugs = (await check.select({ slug: products.slug }).from(products)).map((x) => x.slug).filter((s) => s.startsWith(`creatine-${i}`));
+    assert.equal(new Set(slugs).size, 3);
+  }
+});
+
+test("two concurrent uploads when 5 images exist: exactly one succeeds", async () => {
+  const [a, b, check] = [conn(), conn(), conn()];
+  const owner = await seedStaff(check);
+  const { addProductImage, createProduct } = await import("../../app/lib/products.ts");
+  const { products } = await import("../../db/schema.ts");
+  const store = {
+    async upload() { await new Promise((r) => setTimeout(r, 20)); },
+    async remove() {},
+    async list() { return []; },
+    publicUrl: (p: string) => `https://img.test/${p}`,
+    pathFromUrl: (u: string) => u.slice("https://img.test/".length),
+  };
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  for (let i = 0; i < 5; i++) {
+    const id = await createProduct(check, owner, { name: `Shaker ${i}`, description: "", category: "Accessories" });
+    for (let k = 0; k < 5; k++) await addProductImage(check, store, owner, { productId: id, bytes: PNG });
+    const r = await Promise.allSettled([a, b].map((db) => addProductImage(db, store, owner, { productId: id, bytes: PNG })));
+    assert.equal(r.filter((x) => x.status === "fulfilled").length, 1, JSON.stringify(r));
+    const [row] = await check.select({ images: products.images }).from(products).where(eq(products.id, id));
+    assert.equal(row.images.length, 6);
+  }
+});

@@ -31,7 +31,10 @@ export async function setShopOpen(db: Db, open: boolean): Promise<void> {
 
 export const newKey = (): string => randomUUID();
 
-export async function seedStaff(db: Db, o: { role?: Role; active?: boolean } = {}): Promise<StaffRecord> {
+export async function seedStaff(
+  db: Db,
+  o: { role?: Role; active?: boolean; sessionsValidAfter?: Date } = {},
+): Promise<StaffRecord> {
   const userId = randomUUID();
   const rec: StaffRecord = {
     userId,
@@ -40,6 +43,6 @@ export async function seedStaff(db: Db, o: { role?: Role; active?: boolean } = {
     role: o.role ?? "owner",
     active: o.active ?? true,
   };
-  await db.insert(staff).values(rec);
+  await db.insert(staff).values({ ...rec, sessionsValidAfter: o.sessionsValidAfter ?? null });
   return rec;
 }

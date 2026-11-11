@@ -36,6 +36,13 @@
       "when": 1794426489089,
       "tag": "0004_event_staff_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794428841531,
+      "tag": "0005_staff_sessions_valid_after",
+      "breakpoints": true
     }
   ]
 }
