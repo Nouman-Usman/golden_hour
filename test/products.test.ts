@@ -299,3 +299,35 @@ test("sweep removes only old, unreferenced objects", async () => {
     await close();
   }
 });
+
+test("sweep compares storage paths, not full URLs (a different host in env keeps images)", async () => {
+  const { db, close, owner } = await setup();
+  try {
+    const id = await createProduct(db, owner, { name: "Whey", description: "", category: "Protein" });
+    const old = new Date(Date.now() - 2 * 3600_000);
+    const { store, calls } = fakeStore({}, [{ path: `products/${id}/kept.png`, createdAt: old }]);
+    // Stored by the app under another host/prefix than the script's publicUrl() would build.
+    await db
+      .update(products)
+      .set({ images: [`https://old-host.example/storage/v1/object/public/product-images/products/${id}/kept.png`] })
+      .where(eq(products.id, id));
+    assert.deepEqual(await sweepOrphanImages(db, store), { removed: [], failed: [] });
+    assert.deepEqual(calls, []);
+  } finally {
+    await close();
+  }
+});
+
+test("sweep aborts if a stored image URL can't be understood", async () => {
+  const { db, close, owner } = await setup();
+  try {
+    const id = await createProduct(db, owner, { name: "Whey", description: "", category: "Protein" });
+    const old = new Date(Date.now() - 2 * 3600_000);
+    const { store, calls } = fakeStore({}, [{ path: `products/${id}/a.png`, createdAt: old }]);
+    await db.update(products).set({ images: ["not a url"] }).where(eq(products.id, id));
+    await assert.rejects(sweepOrphanImages(db, store), /can't be read/);
+    assert.deepEqual(calls, []);
+  } finally {
+    await close();
+  }
+});

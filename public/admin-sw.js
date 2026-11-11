@@ -1,4 +1,5 @@
-// Golden Hour Admin service worker. Scope: /admin/. Push notifications only (no offline caching).
+// Golden Hour Admin service worker, registered with scope "/admin" (covers /admin and /admin/*).
+// Push notifications only (no offline caching).
 
 self.addEventListener("push", (event) => {
   let data = { title: "Golden Hour Admin", body: "", url: "/admin", tag: "admin" };
@@ -27,7 +28,11 @@ self.addEventListener("notificationclick", (event) => {
       const admin = windows.find((w) => new URL(w.url).pathname.startsWith("/admin"));
       if (admin) {
         await admin.focus();
-        return admin.navigate(url);
+        try {
+          return await admin.navigate(url);
+        } catch {
+          // navigate() only works on clients this worker controls; open a window instead.
+        }
       }
       return self.clients.openWindow(url);
     })(),

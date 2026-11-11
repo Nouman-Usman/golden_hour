@@ -220,7 +220,7 @@
 
 Decisions confirmed with the user: the **admin portal only** is installable; **staff** get a notification for every new order and new enquiry, even when the app is closed; tapping it opens that order or enquiry; iPhones need the app added to the Home Screen first (iOS 16.4+), and the portal says so.
 
-**Files:** Create `public/admin.webmanifest`, `public/admin/sw.js`, `public/icons/admin.svg`, `public/icons/admin-192.png`, `public/icons/admin-512.png`, `public/icons/admin-180.png`, `app/lib/push.ts`, `app/lib/web-push-sender.ts`, `app/admin/(portal)/push-toggle.tsx`, `app/admin/(portal)/push-actions.ts`, `scripts/generate-vapid.ts`, `test/push.test.ts`, migration `db/migrations/0006_*` (generated); modify `db/schema.ts`, `app/admin/(portal)/layout.tsx`, `app/admin/(portal)/account/page.tsx`, `app/admin/(portal)/page.tsx`, `app/actions.ts`, `.env.example`, `package.json`
+**Files:** Create `public/admin.webmanifest`, `public/admin-sw.js`, `public/icons/admin.svg`, `public/icons/admin-192.png`, `public/icons/admin-512.png`, `public/icons/admin-180.png`, `app/lib/push.ts`, `app/lib/web-push-sender.ts`, `app/admin/(portal)/push-toggle.tsx`, `app/admin/(portal)/push-actions.ts`, `scripts/generate-vapid.ts`, `test/push.test.ts`, migration `db/migrations/0006_*` (generated); modify `db/schema.ts`, `app/admin/(portal)/layout.tsx`, `app/admin/(portal)/account/page.tsx`, `app/admin/(portal)/page.tsx`, `app/actions.ts`, `.env.example`, `package.json`
 
 **Interfaces / decisions:**
 - Dependencies: `web-push@3.6.7` and `@types/web-push@3.6.4` (dev), exact versions (4.0.0 is too new).
@@ -228,7 +228,7 @@ Decisions confirmed with the user: the **admin portal only** is installable; **s
 - Schema `pushSubscriptions` (RLS on): `id`, `staffUserId` FK → `staff` (on delete restrict), `endpoint text unique`, `p256dh text`, `auth text`, `userAgent text`, `createdAt`, `lastSuccessAt nullable`. `npm run db:generate -- --name push_subscriptions` (0006, which only creates this table).
 - Manifest `public/admin.webmanifest`: `name` "Golden Hour Admin", `short_name` "GH Admin", `start_url` "/admin", `scope` "/admin/", `display` "standalone", `background_color` "#141210", `theme_color` "#141210", icons 192 and 512 PNG (`purpose: "any maskable"`) plus the SVG. It is linked only from `(portal)/layout.tsx` and the login page via `metadata.manifest`, with `appleWebApp: { capable: true, title: "GH Admin", statusBarStyle: "black-translucent" }` and the 180px `apple-touch-icon`. The public site gets no manifest.
 - Icons: `public/icons/admin.svg` is a brass "GH" monogram on matte `#141210` with safe padding for maskable crops; PNGs are rendered from it with `qlmanage -t -s <size> -o`. (The real logo is only 150px; swap later when the owner sends a hi-res one.)
-- Service worker `public/admin/sw.js` (served at `/admin/sw.js`, so its scope is `/admin/`): `push` → `self.registration.showNotification(title, { body, tag, data: { url }, icon: "/icons/admin-192.png", badge: "/icons/admin-192.png" })`; `notificationclick` → focus an open `/admin` client and navigate it to `data.url`, else `clients.openWindow(data.url)`. No offline caching (YAGNI).
+- Service worker `public/admin-sw.js` (served at `/admin-sw.js`, so its scope is `/admin/`): `push` → `self.registration.showNotification(title, { body, tag, data: { url }, icon: "/icons/admin-192.png", badge: "/icons/admin-192.png" })`; `notificationclick` → focus an open `/admin` client and navigate it to `data.url`, else `clients.openWindow(data.url)`. No offline caching (YAGNI).
 - Notification content holds **no customer names or phone numbers** (lock screens are visible):
   - order: title "New order GH-1042", body "Rs 5,500 · Pickup" (or "Delivery"), url `/admin/orders/<id>`, tag `order-<id>`;
   - enquiry: title "New enquiry", body the program title, url `/admin/enquiries/<id>`, tag `enquiry-<id>`.
@@ -240,7 +240,7 @@ Decisions confirmed with the user: the **admin portal only** is installable; **s
 - `app/lib/web-push-sender.ts` (`server-only`): `webPushSender: PushSender | null` (null when VAPID env is missing); maps HTTP 404/410 → `gone`, other errors → `failed`.
 - Triggers: in `app/actions.ts`, after `submitEnquiry` returns `created: true`, schedule `notifyStaff` with `after()` from `next/server` (read `node_modules/next/dist/docs/01-app/03-api-reference/04-functions/after.md`), so the customer's response never waits on push. Plan 3's checkout action must do the same for `placeOrder` (note this in `docs/admin/portal.md`).
 - UI `push-toggle.tsx` (client), shown on the dashboard (a dismissible banner until enabled on this device) and on Account:
-  - registers `/admin/sw.js` with scope `/admin/`;
+  - registers `/admin-sw.js` with scope `/admin/`;
   - states:
     - unsupported → "This browser can't show notifications.";
     - iOS and not running as an installed app (`navigator.standalone !== true` and not `display-mode: standalone`) → "On iPhone: tap Share → Add to Home Screen, then open Golden Hour Admin from your Home Screen to turn on notifications.";
@@ -258,7 +258,7 @@ Decisions confirmed with the user: the **admin portal only** is installable; **s
   - `gone` deletes the row and is counted as `removed`; `failed` is counted and nothing throws; `ok` sets `lastSuccessAt`;
   - the payload JSON has the title, body, url and tag above and **contains neither the customer name nor the phone number**.
 - [ ] **Step 3:** FAIL. **Step 4:** Implement: schema and migration 0006, domain, sender, service worker, manifest, icons, toggle, actions, `after()` trigger, and the VAPID script.
-- [ ] **Step 5:** All checks pass. Signed-out check: `/admin.webmanifest` and `/admin/sw.js` are served (200) with the right content types; Chrome DevTools-equivalent check via `fetch` that the manifest parses.
+- [ ] **Step 5:** All checks pass. Signed-out check: `/admin.webmanifest` and `/admin-sw.js` are served (200) with the right content types; Chrome DevTools-equivalent check via `fetch` that the manifest parses.
 - [ ] **Step 6:** The controller asks the user to (a) run `node scripts/generate-vapid.ts` themselves and paste the three values into `.env`, and (b) approve applying migration 0006 (`npm run db:migrate`). Leave changes uncommitted.
 
 ### Task 10: Docs, build, caching check and the user's walkthrough

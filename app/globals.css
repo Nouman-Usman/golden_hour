@@ -8,6 +8,10 @@
   --color-lamp: #f2a93b;
   --color-bone: #ece5d6;
   --color-ash: #7a746b;
+  --color-matte-3: #26221e;
+  --color-line: #332e29;
+  --color-ok: #8fbf8f;
+  --color-danger: #e0715c;
   --font-display: var(--font-big-shoulders);
   --font-body: var(--font-archivo);
 }

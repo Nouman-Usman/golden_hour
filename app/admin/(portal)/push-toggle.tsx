@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { syncExistingSubscription } from "../push-sync";
 import { deletePush, savePush } from "./push-actions";
 
 const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -18,7 +19,7 @@ const standalone = () =>
   window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
 async function registration() {
-  return navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/" });
+  return navigator.serviceWorker.register("/admin-sw.js", { scope: "/admin" });
 }
 
 // Turns browser notifications on/off for this device. Permission is only requested on a click.
@@ -35,8 +36,9 @@ export function PushToggle({ banner = false }: { banner?: boolean }) {
       }
       if (isIOS() && !standalone()) return setState("ios-install");
       if (Notification.permission === "denied") return setState("denied");
+      // Re-save an existing subscription so it follows whoever is signed in now and survives session resets.
       const sub = await (await registration()).pushManager.getSubscription();
-      setState(sub ? "on" : "off");
+      setState(await syncExistingSubscription(sub, savePush, navigator.userAgent));
     })();
   }, []);
 

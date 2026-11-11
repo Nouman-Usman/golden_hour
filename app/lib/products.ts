@@ -274,13 +274,32 @@ export async function removeProductImage(
 const SWEEP_MIN_AGE_MS = 60 * 60 * 1000;
 
 // Deletes stored objects no product references, skipping anything under an hour old (uploads in flight).
+// Storage path ("products/<id>/<file>") from a stored image URL, whatever host or prefix it was saved under.
+export function storagePathFromUrl(url: string): string | null {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+  const i = pathname.indexOf("/products/");
+  return i < 0 ? null : decodeURIComponent(pathname.slice(i + 1));
+}
+
 export async function sweepOrphanImages(db: Db, store: ImageStore): Promise<{ removed: string[]; failed: string[] }> {
-  const referenced = new Set((await db.select({ images: products.images }).from(products)).flatMap((r) => r.images));
+  // Compare by storage path, never by full URL: a different host in this script's env must not
+  // make every stored image look unreferenced.
+  const referenced = new Set<string>();
+  for (const url of (await db.select({ images: products.images }).from(products)).flatMap((r) => r.images)) {
+    const path = storagePathFromUrl(url);
+    if (!path) throw new Error(`Sweep aborted: stored image URL can't be read: ${url}`);
+    referenced.add(path);
+  }
   const cutoff = Date.now() - SWEEP_MIN_AGE_MS;
   const removed: string[] = [];
   const failed: string[] = [];
   for (const o of await store.list("products/")) {
-    if (o.createdAt.getTime() > cutoff || referenced.has(store.publicUrl(o.path))) continue;
+    if (o.createdAt.getTime() > cutoff || referenced.has(o.path)) continue;
     try {
       await store.remove(o.path);
       removed.push(o.path);

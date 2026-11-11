@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { ActionResult } from "../action-error";
+import { input } from "./products/fields";
 import { Result } from "./result";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
@@ -28,8 +29,8 @@ export function StatusButtons({
     <form action={run} className="grid gap-3" onSubmit={() => setArming(null)}>
       <input type="hidden" name={idName} value={id} />
       <label className="block">
-        <span className="text-sm text-ash">Note (optional)</span>
-        <input name="note" maxLength={500} className="w-full border-b border-ash/60 bg-transparent py-2 text-bone focus:border-brass-light focus:outline-none" />
+        <span className="text-sm font-medium text-bone/80">Note (optional)</span>
+        <input name="note" maxLength={500} className={input} />
       </label>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
@@ -47,7 +48,7 @@ export function StatusButtons({
               name="to"
               value={o.value}
               disabled={pending}
-              className={`btn btn-sm ${isDanger ? "bg-lamp text-matte" : "btn-brass"}`}
+              className={`btn btn-sm ${isDanger ? "bg-danger text-matte" : "btn-brass"}`}
             >
               {isDanger ? `Yes, ${o.label.toLowerCase()}` : o.label}
             </button>

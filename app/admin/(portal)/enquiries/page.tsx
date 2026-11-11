@@ -6,6 +6,7 @@ import { listEnquiries } from "../../../lib/admin-queries.ts";
 import { AutoRefresh } from "../../auto-refresh";
 import { enquiryStatusLabel, formatWhen } from "../../format.ts";
 import { requireStaffPage } from "../../guard.ts";
+import { Chips, EmptyState, PageHeader, Pill, toneFor } from "../ui";
 
 type Search = Promise<{ status?: string }>;
 
@@ -20,40 +21,66 @@ async function Enquiries({ searchParams }: { searchParams: Search }) {
   ];
 
   return (
-    <div className="grid gap-6">
+    <div>
       <AutoRefresh />
-      <h1 className="font-display text-4xl font-bold uppercase">Enquiries</h1>
-      <nav aria-label="Filter by status" className="flex gap-2 overflow-x-auto pb-1">
-        {chips.map((c) => (
-          <Link
-            key={c.label}
-            href={c.value ? `/admin/enquiries?status=${c.value}` : "/admin/enquiries"}
-            aria-current={c.value === status ? "page" : undefined}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${
-              c.value === status ? "border-brass bg-brass text-matte" : "border-ash/40 text-bone/80"
-            }`}
-          >
-            {c.label}
-          </Link>
-        ))}
-      </nav>
+      <PageHeader title="Enquiries" description="People who filled in the join form on the website." />
+      <Chips
+        items={chips.map((c) => ({
+          href: c.value ? `/admin/enquiries?status=${c.value}` : "/admin/enquiries",
+          label: c.label,
+          active: c.value === status,
+        }))}
+      />
       {rows.length === 0 ? (
-        <p className="text-bone/70">No enquiries here yet. Join-form submissions from the website appear here automatically.</p>
+        <EmptyState icon="enquiries" title={status ? `No ${enquiryStatusLabel[status].toLowerCase()} enquiries` : "No enquiries yet"}>
+          Join-form submissions from the website appear here automatically.
+        </EmptyState>
       ) : (
-        <ul className="divide-y divide-ash/20 border-y border-ash/20">
-          {rows.map((e) => (
-            <li key={e.id}>
-              <Link href={`/admin/enquiries/${e.id}`} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 py-4 hover:text-brass-light">
-                <span className="font-display text-xl font-bold">{e.name}</span>
-                <span className={`text-right text-sm ${e.status === "new" ? "text-lamp" : "text-ash"}`}>
-                  {enquiryStatusLabel[e.status]}
-                </span>
-                <span className="text-sm text-bone/75">{e.program}</span>
-                <span className="text-right text-sm text-ash">{formatWhen(e.createdAt)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="grid gap-3 md:hidden">
+            {rows.map((e) => (
+              <li key={e.id}>
+                <Link href={`/admin/enquiries/${e.id}`} className="block rounded-2xl border border-line bg-matte-2 p-4 active:bg-matte-3">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="truncate font-semibold">{e.name}</span>
+                    <Pill tone={toneFor(e.status)}>{enquiryStatusLabel[e.status]}</Pill>
+                  </span>
+                  <span className="mt-1 block text-sm text-ash">
+                    {e.program}, {formatWhen(e.createdAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-hidden rounded-2xl border border-line bg-matte-2 md:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line text-ash">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Name</th>
+                  <th className="px-5 py-3 font-medium">Interested in</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 text-right font-medium">Sent</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((e) => (
+                  <tr key={e.id} className="relative transition-colors hover:bg-matte-3">
+                    <td className="px-5 py-3.5 font-semibold">
+                      <Link href={`/admin/enquiries/${e.id}`} className="after:absolute after:inset-0">
+                        {e.name}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3.5 text-bone/75">{e.program}</td>
+                    <td className="px-5 py-3.5">
+                      <Pill tone={toneFor(e.status)}>{enquiryStatusLabel[e.status]}</Pill>
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-bone/75">{formatWhen(e.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

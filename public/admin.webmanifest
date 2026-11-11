@@ -4,7 +4,7 @@
   "description": "Orders, enquiries and shop for Golden Hour Fitness Planet staff.",
   "id": "/admin",
   "start_url": "/admin",
-  "scope": "/admin/",
+  "scope": "/admin",
   "display": "standalone",
   "background_color": "#141210",
   "theme_color": "#141210",

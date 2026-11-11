@@ -1,76 +1,101 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { db } from "../../../db/index.ts";
-import { dashboardCounts } from "../../lib/admin-queries.ts";
+import { dashboardCounts, LOW_STOCK_THRESHOLD } from "../../lib/admin-queries.ts";
 import { can } from "../../lib/permissions.ts";
 import { AutoRefresh } from "../auto-refresh";
 import { requireStaffPage } from "../guard.ts";
+import { Icon, type IconName } from "./icons";
 import { PushToggle } from "./push-toggle";
+import { Card, EmptyState, PageHeader, Pill } from "./ui";
 
-function Tile({ href, value, label }: { href?: string; value: number | string; label: string }) {
+function Tile({ href, value, label, icon, hot }: { href?: string; value: number; label: string; icon: IconName; hot?: boolean }) {
   const body = (
     <>
-      <span className="font-display text-5xl font-black text-brass-light">{value}</span>
-      <span className="mt-1 block text-bone/75">{label}</span>
+      <span className="flex items-center justify-between text-sm text-bone/70">
+        {label}
+        <span className={`grid size-9 place-items-center rounded-lg ${hot ? "bg-lamp/15 text-lamp" : "bg-matte-3 text-ash"}`}>
+          <Icon name={icon} width={18} height={18} />
+        </span>
+      </span>
+      <span className={`mt-3 block font-display text-4xl font-bold md:text-5xl ${hot ? "text-lamp" : "text-bone"}`}>{value}</span>
     </>
   );
+  const cls = "block rounded-2xl border border-line bg-matte-2 p-4 md:p-5";
   return href ? (
-    <Link href={href} className="block rounded-2xl border border-ash/30 p-5 hover:border-brass">
+    <Link href={href} className={`${cls} transition-colors hover:border-brass/60`}>
       {body}
     </Link>
   ) : (
-    <div className="rounded-2xl border border-ash/30 p-5">{body}</div>
+    <div className={cls}>{body}</div>
   );
+}
+
+function greeting() {
+  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Karachi" }).format(new Date()));
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 async function Dashboard({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
   const staff = await requireStaffPage();
   const { denied } = await searchParams;
   const c = db ? await dashboardCounts(db) : { newOrders: 0, newEnquiries: 0, lowStock: [] };
+  const today = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Karachi" }).format(new Date());
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <AutoRefresh />
-      <div>
-        <h1 className="font-display text-4xl font-bold uppercase">Hello, {staff.name.split(" ")[0]}</h1>
-        {denied && (
-          <p role="alert" className="mt-3 text-lamp">
-            You don&apos;t have access to that page.
-          </p>
-        )}
-      </div>
+      <PageHeader title={`${greeting()}, ${staff.name.split(" ")[0]}`} description={today} />
+      {denied && (
+        <p role="alert" className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <Icon name="alert" width={18} height={18} />
+          You don&apos;t have access to that page.
+        </p>
+      )}
       <PushToggle banner />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <Tile
           href={can(staff.role, "orders.manage") ? "/admin/orders?status=new" : undefined}
           value={c.newOrders}
           label="New orders"
+          icon="orders"
+          hot={c.newOrders > 0}
         />
         <Tile
           href={can(staff.role, "enquiries.manage") ? "/admin/enquiries?status=new" : undefined}
           value={c.newEnquiries}
           label="New enquiries"
+          icon="enquiries"
+          hot={c.newEnquiries > 0}
         />
-        <Tile href="/admin/products" value={c.lowStock.length} label="Items low on stock" />
+        <div className="col-span-2 md:col-span-1">
+          <Tile href="/admin/products" value={c.lowStock.length} label="Low on stock" icon="products" />
+        </div>
       </div>
-      {c.lowStock.length > 0 && (
-        <section>
-          <h2 className="font-display text-2xl font-bold">Low stock</h2>
-          <ul className="mt-3 divide-y divide-ash/20 border-y border-ash/20">
+      <Card title="Low stock" description={`Options with ${LOW_STOCK_THRESHOLD} or fewer left.`}>
+        {c.lowStock.length === 0 ? (
+          <EmptyState icon="products" title="Stock looks healthy">
+            Nothing is running low right now.
+          </EmptyState>
+        ) : (
+          <ul className="-mx-4 divide-y divide-line md:-mx-5">
             {c.lowStock.map((r) => (
               <li key={r.variantId}>
-                <Link href={`/admin/products/${r.productId}`} className="flex justify-between gap-4 py-3 hover:text-brass-light">
-                  <span>
-                    {r.productName}
-                    {r.label && <span className="text-ash"> · {r.label}</span>}
+                <Link
+                  href={`/admin/products/${r.productId}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-matte-3 md:px-5"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{r.productName}</span>
+                    {r.label && <span className="block text-sm text-ash">{r.label}</span>}
                   </span>
-                  <span className={r.stock === 0 ? "text-lamp" : "text-bone/75"}>{r.stock} left</span>
+                  <Pill tone={r.stock === 0 ? "danger" : "new"}>{r.stock === 0 ? "Sold out" : `${r.stock} left`}</Pill>
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </Card>
     </div>
   );
 }
