@@ -7,7 +7,7 @@ import { AutoRefresh } from "../auto-refresh";
 import { requireStaffPage } from "../guard.ts";
 import { Icon, type IconName } from "./icons";
 import { PushToggle } from "./push-toggle";
-import { Card, EmptyState, PageHeader, Pill } from "./ui";
+import { Card, PageHeader, Pill } from "./ui";
 
 function Tile({ href, value, label, icon, hot }: { href?: string; value: number; label: string; icon: IconName; hot?: boolean }) {
   const body = (
@@ -74,9 +74,7 @@ async function Dashboard({ searchParams }: { searchParams: Promise<{ denied?: st
       </div>
       <Card title="Low stock" description={`Options with ${LOW_STOCK_THRESHOLD} or fewer left.`}>
         {c.lowStock.length === 0 ? (
-          <EmptyState icon="products" title="Stock looks healthy">
-            Nothing is running low right now.
-          </EmptyState>
+<p className="text-sm text-bone/70">Nothing is running low right now.</p>
         ) : (
           <ul className="-mx-4 divide-y divide-line md:-mx-5">
             {c.lowStock.map((r) => (

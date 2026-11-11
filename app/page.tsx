@@ -4,6 +4,7 @@ import { JoinForm } from "./join-form";
 import { Arrow } from "./arrow";
 import { Motion } from "./motion";
 import { Pricing } from "./pricing";
+import { SiteNav } from "./site-nav";
 import { getJoinPrograms } from "./lib/programs";
 
 const h2 = "font-display text-6xl font-extrabold uppercase leading-[0.9] sm:text-8xl";
@@ -63,7 +64,7 @@ export default async function Home() {
           </div>
           <div className="absolute inset-0 bg-linear-to-t from-matte via-matte/70 to-matte/10" />
           <div data-fx="hero-title" className="relative">
-            <p className="max-w-md text-lg text-bone/80">
+            <p className="max-w-md text-base text-bone/80 sm:text-lg">
               {gym.fullName}, the house of beasts on Sagar Road, Saddar Cantt.
             </p>
             <h1 className="brass brass-sweep mt-4 font-display text-[22vw] font-black uppercase leading-[0.8] tracking-tight sm:text-[17vw]">
@@ -101,31 +102,31 @@ export default async function Home() {
 
         {/* Proof: counters beside a wall of real members drifting in opposite directions */}
         <section data-fx="proof" className="grid items-center gap-12 overflow-hidden px-4 py-20 sm:px-10 md:h-[120svh] md:grid-cols-[2fr_3fr] md:py-0">
-          <div className="flex flex-col gap-12">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:flex md:flex-col md:gap-12">
             <a href={gym.mapsLink} className="group block">
-              <p className="brass font-display text-[9rem] font-black leading-[0.8] sm:text-[12rem]">
+              <p className="brass font-display text-8xl font-black leading-[0.8] sm:text-[9rem] lg:text-[12rem]">
                 <span data-fx="count" data-to={gym.rating} data-decimals="1">{gym.rating}</span>
               </p>
-              <p aria-label={`${gym.rating} out of 5 stars`} className="relative mt-4 inline-block text-3xl tracking-widest text-ash/40">
+              <p aria-label={`${gym.rating} out of 5 stars`} className="relative mt-4 inline-block text-lg tracking-widest text-ash/40 sm:text-3xl">
                 ★★★★★
                 <span className="absolute inset-y-0 left-0 overflow-hidden text-brass" style={{ width: `${(Number(gym.rating) / 5) * 100}%` }}>
                   ★★★★★
                 </span>
               </p>
-              <p className="mt-2 text-lg text-bone/75 group-hover:text-bone">
+              <p className="mt-2 text-sm text-bone/75 group-hover:text-bone sm:text-lg">
                 From Google reviews
               </p>
             </a>
             <a href={gym.instagram} className="group block">
-              <p className="font-display text-7xl font-black leading-none sm:text-8xl">
+              <p className="font-display text-7xl font-black leading-[0.8] sm:text-8xl">
                 <span data-fx="count" data-to="5.6" data-decimals="1">5.6</span>k
               </p>
-              <p className="mt-2 text-lg text-bone/75 group-hover:text-bone">Following @golden_hour_21 on Instagram</p>
+              <p className="mt-4 text-sm text-bone/75 group-hover:text-bone sm:text-lg">Following @golden_hour_21 on Instagram</p>
             </a>
-            <p className="max-w-xs text-bone/60">Men and women train here, with certified coaches on the floor every session.</p>
+            <p className="col-span-2 max-w-xs text-bone/60">Men and women train here, with certified coaches on the floor every session.</p>
           </div>
 
-          <div className="grid h-[70svh] grid-cols-3 gap-3 overflow-hidden mask-[linear-gradient(transparent,black_12%,black_88%,transparent)] md:h-full" aria-label="Members and coaches at Golden Hour">
+          <div className="grid h-[60svh] grid-cols-3 gap-2 sm:gap-3 overflow-hidden mask-[linear-gradient(transparent,black_12%,black_88%,transparent)] md:h-full" aria-label="Members and coaches at Golden Hour">
             {[0, 1, 2].map((c) => (
               <div key={c} data-fx="col" className="flex flex-col gap-3">
                 {members.filter((_, i) => i % 3 === c).map((src) => (
@@ -186,7 +187,7 @@ export default async function Home() {
             </div>
             <p
               data-fx="statement-script"
-              className="absolute font-[family-name:var(--font-kaushan)] left-1/2 top-[42%] w-max -translate-x-1/2 -rotate-6 text-[7vw] leading-none text-bone drop-shadow-[0_4px_18px_rgb(0_0_0/0.5)] sm:text-[5vw]"
+              className="absolute font-[family-name:var(--font-kaushan)] left-1/2 top-[42%] w-max -translate-x-1/2 -rotate-6 text-[9vw] leading-none text-bone drop-shadow-[0_4px_18px_rgb(0_0_0/0.5)] sm:text-[5vw]"
             >
               be a part of elite
             </p>
@@ -233,7 +234,7 @@ export default async function Home() {
               Our head coach doesn&apos;t just train people, he competes: Mr City Lahore, and Mr Pakistan in classic
               physique. The same eye that prepares him for stage checks your form on the floor.
             </p>
-            <a href="#join" className="mt-8 inline-block border-b border-brass pb-1 font-display text-2xl font-bold text-brass-light hover:border-brass-light">
+            <a href="#join" className="mt-8 inline-block border-b border-brass py-1 font-display text-2xl font-bold text-brass-light hover:border-brass-light">
               Train with him
             </a>
           </div>
@@ -292,7 +293,7 @@ export default async function Home() {
             {timings.map((t) => (
               <div key={t.who} data-fx="row" className="rule flex items-baseline justify-between gap-6 py-5">
                 <dt className="text-lg text-bone/80">{t.who}</dt>
-                <dd className="font-display text-3xl font-bold text-brass-light">{t.hours}</dd>
+                <dd className="text-right font-display text-2xl font-bold text-brass-light sm:text-3xl">{t.hours}</dd>
               </div>
             ))}
           </dl>
@@ -335,7 +336,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="flex flex-wrap justify-between gap-4 px-4 pb-32 pt-10 text-sm text-ash sm:px-10">
+      <footer className="grid gap-2 px-4 pb-32 pt-10 text-sm text-ash sm:flex sm:flex-wrap sm:justify-between sm:gap-4 sm:px-10">
         <span>{gym.fullName}</span>
         <span>{gym.tagline}.</span>
         <span>
@@ -346,34 +347,7 @@ export default async function Home() {
         </span>
       </footer>
 
-      {/* Floating nav, Phive-style, thumb reach on mobile */}
-      <nav aria-label="Main" className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-brass/40 bg-matte/90 p-1.5 backdrop-blur">
-          <a href="#" aria-label="Back to top" className="shrink-0">
-            <Image src="/images/logo.jpg" alt="" width={40} height={40} className="rounded-full" />
-          </a>
-          {[
-            ["#floor", "Floor"],
-            ["#coach", "Coach"],
-            ["#programs", "Programs"],
-            ["#timings", "Timings"],
-            ["#pricing", "Pricing"],
-          ].map(([href, label]) => (
-            <a key={href} href={href} className="hidden rounded-full px-4 py-2 font-display text-lg font-bold hover:text-brass-light md:block">
-              {label}
-            </a>
-          ))}
-          <a href={gym.whatsapp} className="rounded-full px-4 py-2 font-display text-lg font-bold hover:text-brass-light md:hidden">
-            WhatsApp
-          </a>
-          <a href="#join" className="btn btn-brass btn-sm btn-action">
-            Join
-            <span className="btn-icon">
-              <Arrow size={14} />
-            </span>
-          </a>
-        </div>
-      </nav>
+      <SiteNav whatsapp={gym.whatsapp} instagram={gym.instagram} />
     </>
   );
 }

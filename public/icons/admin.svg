@@ -1,13 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#e6c77e"/>
       <stop offset="0.55" stop-color="#b8913f"/>
       <stop offset="1" stop-color="#8a6a2b"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="#141210"/>
-  <!-- Content kept inside the central 80% so maskable crops never cut it. -->
-  <text x="256" y="318" text-anchor="middle" font-family="Impact, 'Arial Narrow Bold', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="200" letter-spacing="-6" fill="url(#brass)">GH</text>
-  <rect x="146" y="352" width="220" height="10" rx="5" fill="url(#brass)"/>
+  <rect width="64" height="64" fill="#141210"/>
+  <!-- Blocky GH drawn as strokes (no font dependency), echoing Big Shoulders. -->
+  <path d="M28 18.5H13.5V45.5H28V33.5H21.5M36.5 15.5V48.5M50.5 15.5V48.5M36.5 32H50.5" fill="none" stroke="url(#b)" stroke-width="6.5"/>
 </svg>

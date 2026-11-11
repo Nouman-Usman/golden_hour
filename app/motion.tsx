@@ -8,6 +8,8 @@ import { SplitText } from "gsap/SplitText";
 import Lenis from "lenis";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
+// Phones: the address bar showing/hiding must not re-measure pinned sections mid-scroll.
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 const all = (sel: string) => gsap.utils.toArray<HTMLElement>(sel);
 

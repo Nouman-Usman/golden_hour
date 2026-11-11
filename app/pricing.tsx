@@ -27,14 +27,14 @@ export async function Pricing() {
             {recurring.map((p) => (
               <li
                 key={p.id}
-                className={`flex flex-col gap-6 p-8 ${p.highlighted ? "bg-brass text-matte" : "border border-ash/30"}`}
+                className={`flex flex-col gap-6 p-6 sm:p-8 ${p.highlighted ? "bg-brass text-matte" : "border border-ash/30"}`}
               >
                 <h3 className="font-display text-3xl font-bold">{p.name}</h3>
                 <p>
-                  <span className={`font-display text-6xl font-black ${p.highlighted ? "" : "text-brass-light"}`}>
+                  <span className={`font-display text-5xl font-black sm:text-6xl ${p.highlighted ? "" : "text-brass-light"}`}>
                     {formatPrice(p.price)}
                   </span>
-                  <span className="ml-2 opacity-75">{periodLabel[p.period]}</span>
+                  <span className="ml-2 whitespace-nowrap opacity-75">{periodLabel[p.period]}</span>
                 </p>
                 {p.description && <p className="opacity-80">{p.description}</p>}
                 {p.features.length > 0 && (
