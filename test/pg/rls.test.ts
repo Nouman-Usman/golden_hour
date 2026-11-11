@@ -36,3 +36,17 @@ test("rls: anon and authenticated see and change nothing", async () => {
   }
   await owner.$client.end();
 });
+
+test("rls: every public table has RLS enabled (not forced) and no policies", async () => {
+  const c = postgres(pg.url, { max: 1 });
+  try {
+    const tables = await c`select relname from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`;
+    assert.ok(tables.length > 0, "no public tables found");
+    const bad = await c`select relname from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r' and (not relrowsecurity or relforcerowsecurity)`;
+    assert.deepEqual(bad.map((r) => r.relname), []);
+    const [{ n }] = await c`select count(*)::int as n from pg_policies where schemaname = 'public'`;
+    assert.equal(n, 0);
+  } finally {
+    await c.end();
+  }
+});
