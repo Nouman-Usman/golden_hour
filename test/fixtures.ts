@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/types.ts";
-import { products, productVariants, settings } from "../db/schema.ts";
+import type { StaffRecord } from "../app/lib/permissions.ts";
+import { products, productVariants, settings, staff, type Role } from "../db/schema.ts";
 
 export async function seedProduct(
   db: Db,
@@ -29,3 +30,16 @@ export async function setShopOpen(db: Db, open: boolean): Promise<void> {
 }
 
 export const newKey = (): string => randomUUID();
+
+export async function seedStaff(db: Db, o: { role?: Role; active?: boolean } = {}): Promise<StaffRecord> {
+  const userId = randomUUID();
+  const rec: StaffRecord = {
+    userId,
+    name: "Test Staff",
+    email: `s-${userId}@example.com`.toLowerCase(),
+    role: o.role ?? "owner",
+    active: o.active ?? true,
+  };
+  await db.insert(staff).values(rec);
+  return rec;
+}

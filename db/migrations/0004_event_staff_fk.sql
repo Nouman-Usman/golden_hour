@@ -1,0 +1,2 @@
+ALTER TABLE "enquiry_events" ADD CONSTRAINT "enquiry_events_staff_user_id_staff_user_id_fk" FOREIGN KEY ("staff_user_id") REFERENCES "public"."staff"("user_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_events" ADD CONSTRAINT "order_events_staff_user_id_staff_user_id_fk" FOREIGN KEY ("staff_user_id") REFERENCES "public"."staff"("user_id") ON DELETE restrict ON UPDATE no action;

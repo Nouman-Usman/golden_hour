@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { createTestDb } from "./db.ts";
-import { newKey, seedProduct } from "./fixtures.ts";
+import { newKey, seedProduct, seedStaff } from "./fixtures.ts";
 import { orders, orderEvents, productVariants } from "../db/schema.ts";
 import { placeOrder, changeOrderStatus } from "../app/lib/orders.ts";
 import type { Db } from "../db/types.ts";
+import type { StaffRecord } from "../app/lib/permissions.ts";
 import type { DomainError } from "../app/lib/errors.ts";
 
 const rejects = (p: Promise<unknown>, code: string) =>
@@ -27,21 +28,21 @@ const stockOf = async (db: Db, id: string) =>
   (await db.select({ s: productVariants.stock }).from(productVariants).where(eq(productVariants.id, id)))[0].s;
 const statusOf = async (db: Db, id: string) =>
   (await db.select({ s: orders.status }).from(orders).where(eq(orders.id, id)))[0].s;
-const go = (db: Db, orderId: string, to: Parameters<typeof changeOrderStatus>[1]["to"], staffUserId = randomUUID()) =>
-  changeOrderStatus(db, { orderId, to, staffUserId });
+const go = async (db: Db, orderId: string, to: Parameters<typeof changeOrderStatus>[2]["to"], actor?: StaffRecord) =>
+  changeOrderStatus(db, actor ?? (await seedStaff(db, { role: "front_desk" })), { orderId, to });
 
 test("confirm decrements stock and logs the staff user", async () => {
   const { db, close } = await createTestDb();
   const { variantId } = await seedProduct(db, { name: "Whey", price: 100, stock: 5 });
   const id = await place(db, [{ variantId, quantity: 2 }]);
-  const staff = randomUUID();
-  await changeOrderStatus(db, { orderId: id, to: "confirmed", staffUserId: staff, note: "ok" });
+  const staff = await seedStaff(db, { role: "front_desk" });
+  await changeOrderStatus(db, staff, { orderId: id, to: "confirmed", note: "ok" });
   assert.equal(await stockOf(db, variantId), 3);
   assert.equal(await statusOf(db, id), "confirmed");
   const ev = await db.select().from(orderEvents).where(eq(orderEvents.orderId, id));
   const last = ev.find((e) => e.toStatus === "confirmed")!;
   assert.equal(last.fromStatus, "new");
-  assert.equal(last.staffUserId, staff);
+  assert.equal(last.staffUserId, staff.userId);
   assert.equal(last.note, "ok");
   await close();
 });
@@ -162,5 +163,29 @@ test("direct stock = -1 violates the check", async () => {
   const { db, close } = await createTestDb();
   const { variantId } = await seedProduct(db, { name: "Whey", price: 100, stock: 1 });
   await assert.rejects(db.execute(sql`update product_variants set stock = -1 where id = ${variantId}`));
+  await close();
+});
+
+test("changeOrderStatus: non-UUID order id is not_found", async () => {
+  const { db, close } = await createTestDb();
+  await rejects(go(db, "x", "confirmed"), "not_found");
+  await close();
+});
+
+test("changeOrderStatus: inactive staff is forbidden, nothing changes", async () => {
+  const { db, close } = await createTestDb();
+  const { variantId } = await seedProduct(db, { name: "Whey", price: 100, stock: 5 });
+  const id = await place(db, [{ variantId, quantity: 1 }]);
+  await rejects(go(db, id, "confirmed", await seedStaff(db, { active: false })), "forbidden");
+  assert.equal(await statusOf(db, id), "new");
+  await close();
+});
+
+test("changeOrderStatus: front_desk may change status", async () => {
+  const { db, close } = await createTestDb();
+  const { variantId } = await seedProduct(db, { name: "Whey", price: 100, stock: 5 });
+  const id = await place(db, [{ variantId, quantity: 1 }]);
+  await go(db, id, "confirmed", await seedStaff(db, { role: "front_desk" }));
+  assert.equal(await statusOf(db, id), "confirmed");
   await close();
 });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { createTestDb } from "./db.ts";
-import { newKey } from "./fixtures.ts";
+import { newKey, seedStaff } from "./fixtures.ts";
 import { enquiries, enquiryEvents, programs } from "../db/schema.ts";
 import { parseEnquiry, enquiryFailure, ENQUIRY_GENERIC_ERROR } from "../app/lib/enquiry.ts";
 import {
@@ -107,25 +107,37 @@ test("status moves forward only, with events", async () => {
   const { db, close } = await createTestDb();
   await seedProgram(db, "Personal training");
   const { id } = await submitEnquiry(db, data());
-  const staff = randomUUID();
+  const staff = await seedStaff(db, { role: "front_desk" });
   assert.deepEqual(nextEnquiryStatuses.new, ["contacted", "joined", "not_interested"]);
-  await changeEnquiryStatus(db, { enquiryId: id, to: "contacted", staffUserId: staff, note: "called" });
-  await rejects(changeEnquiryStatus(db, { enquiryId: id, to: "new", staffUserId: staff }), "invalid_transition");
-  await changeEnquiryStatus(db, { enquiryId: id, to: "joined", staffUserId: staff });
-  await assert.rejects(changeEnquiryStatus(db, { enquiryId: id, to: "not_interested", staffUserId: staff }),
+  await changeEnquiryStatus(db, staff, { enquiryId: id, to: "contacted", note: "called" });
+  await rejects(changeEnquiryStatus(db, staff, { enquiryId: id, to: "new" }), "invalid_transition");
+  await changeEnquiryStatus(db, staff, { enquiryId: id, to: "joined" });
+  await assert.rejects(changeEnquiryStatus(db, staff, { enquiryId: id, to: "not_interested" }),
     (e: DomainError) => e.message === "An enquiry can't move from joined to not_interested.");
   const [row] = await db.select().from(enquiries).where(eq(enquiries.id, id));
   assert.equal(row.status, "joined");
   const ev = await db.select().from(enquiryEvents).where(eq(enquiryEvents.enquiryId, id));
   assert.equal(ev.length, 3);
-  assert.ok(ev.some((e) => e.fromStatus === "new" && e.toStatus === "contacted" && e.staffUserId === staff && e.note === "called"));
+  assert.ok(ev.some((e) => e.fromStatus === "new" && e.toStatus === "contacted" && e.staffUserId === staff.userId && e.note === "called"));
   await close();
 });
 
 test("changeEnquiryStatus: unknown or non-UUID id is not_found", async () => {
   const { db, close } = await createTestDb();
-  await rejects(changeEnquiryStatus(db, { enquiryId: randomUUID(), to: "joined", staffUserId: randomUUID() }), "not_found");
-  await rejects(changeEnquiryStatus(db, { enquiryId: "x", to: "joined", staffUserId: randomUUID() }), "not_found");
+  const staff = await seedStaff(db);
+  await rejects(changeEnquiryStatus(db, staff, { enquiryId: randomUUID(), to: "joined" }), "not_found");
+  await rejects(changeEnquiryStatus(db, staff, { enquiryId: "x", to: "joined" }), "not_found");
+  await close();
+});
+
+test("changeEnquiryStatus: inactive staff is forbidden; front_desk allowed", async () => {
+  const { db, close } = await createTestDb();
+  await seedProgram(db, "Personal training");
+  const { id } = await submitEnquiry(db, data());
+  await rejects(changeEnquiryStatus(db, await seedStaff(db, { active: false }), { enquiryId: id, to: "contacted" }), "forbidden");
+  await changeEnquiryStatus(db, await seedStaff(db, { role: "front_desk" }), { enquiryId: id, to: "contacted" });
+  const [row] = await db.select().from(enquiries).where(eq(enquiries.id, id));
+  assert.equal(row.status, "contacted");
   await close();
 });
 

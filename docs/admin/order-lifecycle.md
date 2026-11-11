@@ -1,6 +1,6 @@
 # Order lifecycle
 
-Orders move forward only. `changeOrderStatus` (`app/lib/orders.ts`) is the single place status changes happen.
+Orders move forward only. `changeOrderStatus` (`app/lib/orders.ts`) is the single place status changes happen. Signature: `changeOrderStatus(db, actor: StaffRecord, { orderId, to, note? })`. It calls `authorize(actor, "orders.manage")` first (inactive or unauthorised staff get `forbidden`) and records `actor.userId` on the event; a non-UUID `orderId` is `not_found`.
 
 ```mermaid
 stateDiagram-v2
@@ -37,4 +37,4 @@ Re-sending a status change is safe: the order is locked, so the repeat sees the 
 
 ## Events
 
-Every change writes an `order_events` row in the same transaction: from, to, staff user id, optional note. Placement writes the first event (`null` to `new`, no staff user).
+Every change writes an `order_events` row in the same transaction: from, to, staff user id, optional note. `order_events.staff_user_id` (and `enquiry_events.staff_user_id`) is a nullable FK to `staff.user_id`, `on delete restrict`: staff with history are deactivated, never deleted. Placement writes the first event (`null` to `new`, no staff user).

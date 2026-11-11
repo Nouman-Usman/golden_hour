@@ -3,6 +3,7 @@ import type { Db } from "../../db/types.ts";
 import { enquiries, enquiryEvents, programs, type EnquiryStatus } from "../../db/schema.ts";
 import { DomainError } from "./errors.ts";
 import { normalizePkMobile, type EnquiryInput } from "./enquiry.ts";
+import { authorize, type StaffRecord } from "./permissions.ts";
 import { isUuid, requestHash } from "./idempotency.ts";
 
 type Submitted = { id: string; created: boolean };
@@ -88,10 +89,12 @@ export const nextEnquiryStatuses: Record<EnquiryStatus, readonly EnquiryStatus[]
   not_interested: [],
 };
 
-export type EnquiryStatusInput = { enquiryId: string; to: EnquiryStatus; staffUserId: string; note?: string };
+export type EnquiryStatusInput = { enquiryId: string; to: EnquiryStatus; note?: string };
 
-export async function changeEnquiryStatus(db: Db, input: EnquiryStatusInput): Promise<void> {
-  const { enquiryId, to, staffUserId, note } = input;
+export async function changeEnquiryStatus(db: Db, actor: StaffRecord, input: EnquiryStatusInput): Promise<void> {
+  authorize(actor, "enquiries.manage");
+  const { enquiryId, to, note } = input;
+  const staffUserId = actor.userId;
   if (typeof enquiryId !== "string" || !isUuid(enquiryId)) throw new DomainError("not_found", "Enquiry not found.");
   await db.transaction(async (tx) => {
     const [row] = await tx

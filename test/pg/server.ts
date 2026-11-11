@@ -46,10 +46,6 @@ async function prepare(url: string, adminUrl: string): Promise<void> {
 }
 
 export async function startPostgres(): Promise<{ url: string; stop: () => Promise<void> }> {
-  if (process.env.TEST_DATABASE_URL) {
-    // ponytail: assumes the external DB is empty and already has app_owner-like roles; no teardown.
-    return { url: process.env.TEST_DATABASE_URL, stop: async () => {} };
-  }
   const bin = process.env.PG_BIN ?? "/opt/homebrew/opt/postgresql@17/bin";
   const dir = await mkdtemp(join(tmpdir(), "gh-pg-"));
   const data = join(dir, "data");

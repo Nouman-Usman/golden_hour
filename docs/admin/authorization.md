@@ -8,6 +8,8 @@ Drizzle connects as Supabase's `postgres` role, which owns the tables and theref
 
 Every admin page, server action and route handler calls `requirePermission` first and re-reads the staff row (role and `active` are never trusted from the session or client). `requirePermission` wraps `authorize()` in `app/lib/permissions.ts`: no session is `unauthenticated`; an inactive account or missing permission is `forbidden`.
 
+Domain functions that mutate on behalf of staff take the `StaffRecord` (`actor`) and call `authorize(actor, permission)` themselves, so the boundary holds even if a caller forgets `requirePermission`; the event's staff id comes from `actor.userId`, never from input.
+
 ## Matrix
 
 | Permission | owner | front_desk |
@@ -26,8 +28,8 @@ Every admin page, server action and route handler calls `requirePermission` firs
 | Action | Permission | Status |
 |---|---|---|
 | createStaff, setStaffActive, setStaffRole, resetStaffPassword | staff.manage | Task 4 |
-| changeOrderStatus | orders.manage | Task 6 |
-| changeEnquiryStatus | enquiries.manage | Task 7 |
+| changeOrderStatus(db, actor, input) | orders.manage | Task 6 |
+| changeEnquiryStatus(db, actor, input) | enquiries.manage | Task 7 |
 | placeOrder, submitEnquiry | none (public) | Tasks 6-7 |
 | adjustStock, setVariantInStock | stock.adjust | planned |
 | create/update/archive/restore product and variant, change price | products.edit | planned |

@@ -4,6 +4,7 @@ import { orders, orderItems, orderEvents, products, productVariants, type OrderS
 import { DomainError } from "./errors.ts";
 import { normalizePkMobile } from "./enquiry.ts";
 import { isUuid, requestHash } from "./idempotency.ts";
+import { authorize, type StaffRecord } from "./permissions.ts";
 import { getSettings } from "./settings.ts";
 
 export type PlaceOrderInput = {
@@ -166,11 +167,14 @@ export const nextStatuses: Record<OrderStatus, readonly OrderStatus[]> = {
   cancelled: [],
 };
 
-export type OrderStatusInput = { orderId: string; to: OrderStatus; staffUserId: string; note?: string };
+export type OrderStatusInput = { orderId: string; to: OrderStatus; note?: string };
 
 // Lock order: order row, then its variant rows by ascending id (same as any stock-touching tx).
-export async function changeOrderStatus(db: Db, input: OrderStatusInput): Promise<void> {
-  const { orderId, to, staffUserId, note } = input;
+export async function changeOrderStatus(db: Db, actor: StaffRecord, input: OrderStatusInput): Promise<void> {
+  authorize(actor, "orders.manage");
+  const { orderId, to, note } = input;
+  if (typeof orderId !== "string" || !isUuid(orderId)) throw new DomainError("not_found", "Order not found.");
+  const staffUserId = actor.userId;
   await db.transaction(async (tx) => {
     const [order] = await tx
       .select({ status: orders.status, fulfilment: orders.fulfilment })

@@ -50,3 +50,23 @@ test("rls: every public table has RLS enabled (not forced) and no policies", asy
     await c.end();
   }
 });
+
+test("event staff_user_id columns are FKs to staff; unknown staff id is rejected", async () => {
+  const c = connect(pg.url);
+  const fks = await c.$client`
+    select tc.table_name t from information_schema.table_constraints tc
+    join information_schema.key_column_usage k using (constraint_name, table_schema)
+    where tc.constraint_type = 'FOREIGN KEY' and k.column_name = 'staff_user_id'
+    order by 1`;
+  assert.deepEqual(fks.map((r) => r.t), ["enquiry_events", "order_events"]);
+  const { variantId } = await seedProduct(c, { name: "FK", price: 1, stock: 1 });
+  const o = await placeOrder(c, {
+    idempotencyKey: newKey(), customerName: "Ali", customerPhone: "03214220245",
+    fulfilment: "pickup", items: [{ variantId, quantity: 1 }],
+  });
+  await assert.rejects(
+    c.$client`insert into order_events (order_id, to_status, staff_user_id) values (${o.id}, 'confirmed', gen_random_uuid())`,
+    (e: { code?: string }) => e.code === "23503",
+  );
+  await c.$client.end();
+});

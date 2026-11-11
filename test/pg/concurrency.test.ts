@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { connect, startPostgres } from "./server.ts";
-import { newKey, seedProduct } from "../fixtures.ts";
+import { newKey, seedProduct, seedStaff } from "../fixtures.ts";
 import { enquiries, orders, productVariants, programs, staff } from "../../db/schema.ts";
 import { placeOrder, changeOrderStatus } from "../../app/lib/orders.ts";
 import { submitEnquiry } from "../../app/lib/enquiries.ts";
@@ -52,9 +52,10 @@ test("two staff confirming the last unit: one wins, one insufficient_stock", asy
     // both orders placed while stock is 1 (placing doesn't reserve)
     const o1 = await placeOrder(check, order(newKey(), [{ variantId, quantity: 1 }]));
     const o2 = await placeOrder(check, order(newKey(), [{ variantId, quantity: 1 }]));
+    const fd = await seedStaff(check, { role: "front_desk" });
     const r = await Promise.allSettled([
-      changeOrderStatus(a, { orderId: o1.id, to: "confirmed", staffUserId: randomUUID() }),
-      changeOrderStatus(b, { orderId: o2.id, to: "confirmed", staffUserId: randomUUID() }),
+      changeOrderStatus(a, fd, { orderId: o1.id, to: "confirmed" }),
+      changeOrderStatus(b, fd, { orderId: o2.id, to: "confirmed" }),
     ]);
     assert.equal(r.filter((x) => x.status === "fulfilled").length, 1, JSON.stringify(r));
     const bad = r.find((x) => x.status === "rejected") as PromiseRejectedResult;
@@ -70,12 +71,13 @@ test("confirm and cancel on overlapping variants don't deadlock", async () => {
     const v2 = (await seedProduct(check, { name: "V2", price: 10, stock: 10 })).variantId;
     const A = await placeOrder(check, order(newKey(), [{ variantId: v1, quantity: 1 }, { variantId: v2, quantity: 1 }]));
     const B = await placeOrder(check, order(newKey(), [{ variantId: v2, quantity: 1 }, { variantId: v1, quantity: 1 }]));
-    await changeOrderStatus(check, { orderId: B.id, to: "confirmed", staffUserId: randomUUID() });
+    const fd = await seedStaff(check, { role: "front_desk" });
+    await changeOrderStatus(check, fd, { orderId: B.id, to: "confirmed" });
     const t0 = Date.now();
     const r = await Promise.race([
       Promise.allSettled([
-        changeOrderStatus(a, { orderId: A.id, to: "confirmed", staffUserId: randomUUID() }),
-        changeOrderStatus(b, { orderId: B.id, to: "cancelled", staffUserId: randomUUID() }),
+        changeOrderStatus(a, fd, { orderId: A.id, to: "confirmed" }),
+        changeOrderStatus(b, fd, { orderId: B.id, to: "cancelled" }),
       ]),
       new Promise<"timeout">((res) => setTimeout(() => res("timeout"), 5000)),
     ]);
@@ -98,7 +100,7 @@ test("two owners demoting each other leave one owner", async () => {
     async listUserIds() { return []; },
   };
   for (let i = 0; i < 10; i++) {
-    await check.delete(staff);
+    await check.delete(staff).where(sql`role = 'owner'`); // front_desk rows are referenced by event FKs
     const [u1, u2] = [randomUUID(), randomUUID()];
     await check.insert(staff).values([
       { userId: u1, name: "A", email: `a${i}@x.pk`, role: "owner" },

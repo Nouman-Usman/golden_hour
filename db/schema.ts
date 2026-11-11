@@ -231,7 +231,7 @@ export const orderEvents = pgTable(
     orderId: uuid().notNull().references(() => orders.id, { onDelete: "restrict" }),
     fromStatus: orderStatus(),
     toStatus: orderStatus().notNull(),
-    staffUserId: uuid(), // null = customer
+    staffUserId: uuid().references(() => staff.userId, { onDelete: "restrict" }), // null = customer
     note: text(),
     createdAt: ts(),
   },
@@ -262,7 +262,7 @@ export const enquiryEvents = pgTable(
     enquiryId: uuid().notNull().references(() => enquiries.id, { onDelete: "restrict" }),
     fromStatus: enquiryStatus(),
     toStatus: enquiryStatus().notNull(),
-    staffUserId: uuid(), // null = customer
+    staffUserId: uuid().references(() => staff.userId, { onDelete: "restrict" }), // null = customer
     note: text(),
     createdAt: ts(),
   },
