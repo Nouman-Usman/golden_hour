@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { createTestDb } from "./db.ts";
 import { newKey } from "./fixtures.ts";
 import { enquiries, enquiryEvents, programs } from "../db/schema.ts";
-import { parseEnquiry } from "../app/lib/enquiry.ts";
+import { parseEnquiry, enquiryFailure, ENQUIRY_GENERIC_ERROR } from "../app/lib/enquiry.ts";
 import {
   submitEnquiry,
   changeEnquiryStatus,
@@ -14,7 +14,7 @@ import {
   enquiryWhatsAppUrl,
 } from "../app/lib/enquiries.ts";
 import type { Db } from "../db/types.ts";
-import type { DomainError } from "../app/lib/errors.ts";
+import { DomainError } from "../app/lib/errors.ts";
 
 const form = (o: Record<string, string>) => {
   const f = new FormData();
@@ -135,4 +135,12 @@ test("enquiryWhatsAppUrl", () => {
   assert.ok(u.includes("Interested%20in%3A%20Personal%20training"));
   assert.ok(!u.includes("Message"));
   assert.ok(enquiryWhatsAppUrl("1", { name: "A", phone: "p", program: "q", message: "hi" }).includes("%0AMessage%3A%20hi"));
+});
+
+test("enquiryFailure: only field errors and conflicts reach the visitor", () => {
+  const D = (c: ConstructorParameters<typeof DomainError>[0], m: string, f?: Record<string, string>) => new DomainError(c, m, f);
+  assert.deepEqual(enquiryFailure(D("invalid_input", "x", { program: "p" })), { errors: { program: "p" }, log: false });
+  assert.deepEqual(enquiryFailure(D("idempotency_conflict", "dup")), { formError: "dup", log: false });
+  assert.deepEqual(enquiryFailure(D("misconfigured", "Shop settings row is missing")), { formError: ENQUIRY_GENERIC_ERROR, log: true });
+  assert.deepEqual(enquiryFailure(new Error('relation "enquiries" does not exist')), { formError: ENQUIRY_GENERIC_ERROR, log: true });
 });

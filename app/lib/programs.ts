@@ -9,5 +9,12 @@ export async function getJoinPrograms(): Promise<string[]> {
   cacheTag("programs");
   cacheLife("hours");
 
-  return db ? getVisibleProgramTitles(db) : programs.map((p) => p.title);
+  const fallback = programs.map((p) => p.title);
+  if (!db) return fallback;
+  try {
+    return await getVisibleProgramTitles(db);
+  } catch (e) {
+    console.error("getJoinPrograms failed, using fallback", e); // DB down or migrations not applied yet
+    return fallback;
+  }
 }

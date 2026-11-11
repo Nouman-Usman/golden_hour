@@ -34,3 +34,14 @@ export function parseEnquiry(form: FormData): { data?: EnquiryInput; errors?: En
   if (Object.keys(errors).length) return { errors };
   return { data: { idempotencyKey, name, phone: phone!, program, message } };
 }
+
+export const ENQUIRY_GENERIC_ERROR = "We couldn't send your enquiry right now. Call or WhatsApp us instead.";
+
+// Maps a caught submit error to what the visitor may see; `log` is true when it should be logged.
+export function enquiryFailure(e: unknown): { errors?: EnquiryErrors; formError?: string; log: boolean } {
+  if (e instanceof DomainError) {
+    if (e.code === "invalid_input") return { errors: e.fields as EnquiryErrors, log: false };
+    if (e.code === "idempotency_conflict") return { formError: e.message, log: false };
+  }
+  return { formError: ENQUIRY_GENERIC_ERROR, log: true };
+}
