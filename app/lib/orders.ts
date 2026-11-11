@@ -1,6 +1,6 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../../db/types.ts";
-import { orders, orderItems, orderEvents, products, productVariants } from "../../db/schema.ts";
+import { orders, orderItems, orderEvents, products, productVariants, type OrderStatus } from "../../db/schema.ts";
 import { DomainError } from "./errors.ts";
 import { normalizePkMobile } from "./enquiry.ts";
 import { isUuid, requestHash } from "./idempotency.ts";
@@ -155,4 +155,83 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<Placed
   const winner = await findExisting(db, input.idempotencyKey, hash);
   if (!winner) throw new DomainError("misconfigured", "Order insert conflicted but no order was found");
   return winner;
+}
+
+export const nextStatuses: Record<OrderStatus, readonly OrderStatus[]> = {
+  new: ["confirmed", "cancelled"],
+  confirmed: ["ready_for_pickup", "out_for_delivery", "cancelled"],
+  ready_for_pickup: ["completed", "cancelled"],
+  out_for_delivery: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+export type OrderStatusInput = { orderId: string; to: OrderStatus; staffUserId: string; note?: string };
+
+// Lock order: order row, then its variant rows by ascending id (same as any stock-touching tx).
+export async function changeOrderStatus(db: Db, input: OrderStatusInput): Promise<void> {
+  const { orderId, to, staffUserId, note } = input;
+  await db.transaction(async (tx) => {
+    const [order] = await tx
+      .select({ status: orders.status, fulfilment: orders.fulfilment })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .for("update");
+    if (!order) throw new DomainError("not_found", "Order not found.");
+    const from = order.status;
+
+    const wrongFulfilment =
+      (to === "ready_for_pickup" && order.fulfilment === "delivery") ||
+      (to === "out_for_delivery" && order.fulfilment === "pickup");
+    if (!nextStatuses[from].includes(to) || wrongFulfilment) {
+      throw new DomainError("invalid_transition", `An order can't move from ${from} to ${to}.`);
+    }
+
+    const confirm = to === "confirmed";
+    const restore = to === "cancelled" && from !== "new";
+    if (confirm || restore) {
+      // One statement, ORDER BY id: every writer acquires variant locks in the same order.
+      const stockRows = await tx
+        .select({ id: productVariants.id, stock: productVariants.stock })
+        .from(productVariants)
+        .where(inArray(productVariants.id, tx.select({ v: orderItems.variantId }).from(orderItems).where(eq(orderItems.orderId, orderId))))
+        .orderBy(productVariants.id)
+        .for("update");
+      const stock = new Map(stockRows.map((r) => [r.id, r.stock]));
+
+      const items = await tx
+        .select({
+          variantId: orderItems.variantId,
+          productName: orderItems.productName,
+          variantLabel: orderItems.variantLabel,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
+      const need = new Map<string, { qty: number; name: string; label: string }>();
+      for (const it of items) {
+        const cur = need.get(it.variantId);
+        need.set(it.variantId, { qty: (cur?.qty ?? 0) + it.quantity, name: it.productName, label: it.variantLabel });
+      }
+      const lines = [...need].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+      if (confirm) {
+        for (const [vid, n] of lines) {
+          const have = stock.get(vid) ?? 0;
+          if (have < n.qty) {
+            throw new DomainError("insufficient_stock", `Only ${have} left of ${n.name}${n.label ? ` (${n.label})` : ""}.`);
+          }
+        }
+      }
+      for (const [vid, n] of lines) {
+        await tx
+          .update(productVariants)
+          .set({ stock: confirm ? sql`${productVariants.stock} - ${n.qty}` : sql`${productVariants.stock} + ${n.qty}` })
+          .where(eq(productVariants.id, vid));
+      }
+    }
+
+    await tx.update(orders).set({ status: to, updatedAt: new Date() }).where(eq(orders.id, orderId));
+    await tx.insert(orderEvents).values({ orderId, fromStatus: from, toStatus: to, staffUserId, note: note ?? null });
+  });
 }
