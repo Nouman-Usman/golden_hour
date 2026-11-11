@@ -3,9 +3,13 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getStaff } from "../../lib/auth.ts";
+import { adminPwaMetadata, adminViewport } from "../pwa-metadata.ts";
 import { LoginForm } from "./login-form";
 
+export const viewport = adminViewport;
+
 export const metadata: Metadata = {
+  ...adminPwaMetadata,
   title: "Sign in · Golden Hour Admin",
   robots: { index: false, follow: false },
 };

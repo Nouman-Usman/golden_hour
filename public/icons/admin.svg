@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6c77e"/>
+      <stop offset="0.55" stop-color="#b8913f"/>
+      <stop offset="1" stop-color="#8a6a2b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#141210"/>
+  <!-- Content kept inside the central 80% so maskable crops never cut it. -->
+  <text x="256" y="318" text-anchor="middle" font-family="Impact, 'Arial Narrow Bold', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="200" letter-spacing="-6" fill="url(#brass)">GH</text>
+  <rect x="146" y="352" width="220" height="10" rx="5" fill="url(#brass)"/>
+</svg>

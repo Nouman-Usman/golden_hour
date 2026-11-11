@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { adminPwaMetadata, adminViewport } from "../pwa-metadata.ts";
 import { Suspense, type ReactNode } from "react";
 import { db } from "../../../db/index.ts";
 import { adminTitle, dashboardCounts } from "../../lib/admin-queries.ts";
@@ -12,10 +13,13 @@ const counts = async () => (db ? dashboardCounts(db) : { newOrders: 0, newEnquir
 export async function generateMetadata(): Promise<Metadata> {
   await requireStaffPage();
   return {
+    ...adminPwaMetadata,
     title: adminTitle(await counts()),
     robots: { index: false, follow: false },
   };
 }
+
+export const viewport = adminViewport;
 
 async function Shell({ children }: { children: ReactNode }) {
   const staff = await requireStaffPage();

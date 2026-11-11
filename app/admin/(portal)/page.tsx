@@ -5,6 +5,7 @@ import { dashboardCounts } from "../../lib/admin-queries.ts";
 import { can } from "../../lib/permissions.ts";
 import { AutoRefresh } from "../auto-refresh";
 import { requireStaffPage } from "../guard.ts";
+import { PushToggle } from "./push-toggle";
 
 function Tile({ href, value, label }: { href?: string; value: number | string; label: string }) {
   const body = (
@@ -38,6 +39,7 @@ async function Dashboard({ searchParams }: { searchParams: Promise<{ denied?: st
           </p>
         )}
       </div>
+      <PushToggle banner />
       <div className="grid gap-3 sm:grid-cols-3">
         <Tile
           href={can(staff.role, "orders.manage") ? "/admin/orders?status=new" : undefined}

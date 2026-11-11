@@ -168,7 +168,7 @@ test("reconcile finds orphans and rebans inactive staff", async () => {
   const orphan = "55555555-5555-4555-8555-555555555555";
   const { admin, calls } = fakeAdmin({}, [OWNER_ID, id, orphan]);
   const res = await reconcileStaff(db, admin);
-  assert.deepEqual(res, { orphanAuthUsers: [orphan], rebanned: [id] });
+  assert.deepEqual(res, { orphanAuthUsers: [orphan], rebanned: [id], failed: [] });
   assert.deepEqual(calls.filter((c) => c[0] === "setBanned"), [["setBanned", id, true]]);
   await close();
 });

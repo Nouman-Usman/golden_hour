@@ -3,11 +3,13 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema.ts";
 import { makeAuthAdmin } from "../app/lib/supabase-auth-admin.ts";
+import { EMAIL } from "../app/lib/staff.ts";
 
 const [email, ...nameParts] = process.argv.slice(2);
 const name = nameParts.join(" ").trim();
 const password = process.env.OWNER_PASSWORD ?? "";
 if (!email || !name) throw new Error("Usage: create-owner.ts <email> <name>");
+if (!EMAIL.test(email.trim().toLowerCase())) throw new Error(`Not a valid email: ${email}`);
 if (password.length < 10) throw new Error("OWNER_PASSWORD must be set (at least 10 characters)");
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
 

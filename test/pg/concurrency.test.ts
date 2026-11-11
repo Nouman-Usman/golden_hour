@@ -165,3 +165,30 @@ test("two concurrent uploads when 5 images exist: exactly one succeeds", async (
     assert.equal(row.images.length, 6);
   }
 });
+
+test("an owner demoted while creating staff never creates staff as a demoted actor", async () => {
+  const [a, b, check] = [conn(), conn(), conn()];
+  const { createStaff } = await import("../../app/lib/staff.ts");
+  const fake: AuthAdmin = {
+    async createUser() { await new Promise((r) => setTimeout(r, 10)); return randomUUID(); },
+    async deleteUser() {}, async setPassword() {}, async setBanned() {}, async listUserIds() { return []; },
+  };
+  for (let i = 0; i < 10; i++) {
+    const ownerA = await seedStaff(check);
+    const ownerB = await seedStaff(check);
+    const email = `made-${i}-${randomUUID()}@x.pk`;
+    const r = await Promise.allSettled([
+      setStaffRole(a, ownerA, ownerB.userId, "front_desk"),
+      createStaff(b, fake, ownerB, { name: "New", email, role: "front_desk", password: "longenough1" }),
+    ]);
+    assert.equal(r[0].status, "fulfilled", JSON.stringify(r[0]));
+    const created = (await check.select().from(staff).where(eq(staff.email, email))).length;
+    if (r[1].status === "rejected") {
+      assert.equal((r[1].reason as DomainError).code, "forbidden");
+      assert.equal(created, 0);
+    } else {
+      // Allowed only if the create committed before the demotion did (the share lock forces an order).
+      assert.equal(created, 1);
+    }
+  }
+});

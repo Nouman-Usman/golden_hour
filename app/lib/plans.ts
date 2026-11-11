@@ -28,7 +28,7 @@ export async function getPlans() {
     .orderBy(asc(plans.position));
 }
 
-export const formatPrice = (rupees: number) => `Rs ${rupees.toLocaleString("en-PK")}`;
+export { formatPrice } from "./money.ts";
 
 export const periodLabel: Record<Plan["period"], string> = {
   one_time: "one time",

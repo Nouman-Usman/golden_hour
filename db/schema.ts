@@ -270,3 +270,15 @@ export const enquiryEvents = pgTable(
   },
   (t) => [index("enquiry_events_enquiry_created_idx").on(t.enquiryId, t.createdAt)],
 ).enableRLS();
+
+// Browser push subscriptions for staff devices (admin PWA). One row per browser endpoint.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: id(),
+  staffUserId: uuid().notNull().references(() => staff.userId, { onDelete: "restrict" }),
+  endpoint: text().notNull().unique(),
+  p256dh: text().notNull(),
+  auth: text().notNull(),
+  userAgent: text().notNull().default(""),
+  createdAt: ts(),
+  lastSuccessAt: timestamp({ withTimezone: true }),
+}).enableRLS();

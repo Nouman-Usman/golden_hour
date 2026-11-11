@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireStaffPage } from "../../guard.ts";
+import { PushToggle } from "../push-toggle";
 import { PasswordForm } from "./password-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -15,6 +16,10 @@ async function AccountContent() {
           {staff.name} · {staff.email} · {staff.role === "owner" ? "Owner" : "Front desk"}
         </p>
       </div>
+      <section className="grid gap-4">
+        <h2 className="font-display text-2xl font-bold">Notifications on this device</h2>
+        <PushToggle />
+      </section>
       <section className="grid gap-4">
         <h2 className="font-display text-2xl font-bold">Change password</h2>
         <PasswordForm />

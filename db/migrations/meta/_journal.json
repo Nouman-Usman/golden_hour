@@ -43,6 +43,13 @@
       "when": 1794428841531,
       "tag": "0005_staff_sessions_valid_after",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794429038241,
+      "tag": "0006_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }
