@@ -1,21 +1,31 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { submitEnquiry, type JoinState } from "./actions";
 import { Arrow } from "./arrow";
-import { sessions } from "./lib/enquiry";
 
 const field =
   "w-full border-b border-ash/60 bg-transparent py-3 text-lg text-bone placeholder:text-ash focus:border-brass-light focus:outline-none";
 
-export function JoinForm() {
+export function JoinForm({ programs }: { programs: string[] }) {
   const [state, action, pending] = useActionState<JoinState, FormData>(submitEnquiry, {});
+  // Set after mount: the page is cached, so a render-time key would be shared by every visitor.
+  const [key, setKey] = useState("");
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only, once per mount
+  useEffect(() => setKey(crypto.randomUUID()), []);
 
   if (state.ok) {
     return (
-      <p role="status" className="text-2xl leading-snug">
-        Enquiry sent. We&apos;ll call or WhatsApp you within a day to book your first visit.
-      </p>
+      <div className="grid justify-items-start gap-6">
+        <p role="status" className="text-2xl leading-snug">
+          Enquiry sent. We&apos;ll call or WhatsApp you within a day to book your first visit.
+        </p>
+        {state.whatsappUrl && (
+          <a href={state.whatsappUrl} className="btn btn-outline">
+            Also message us on WhatsApp
+          </a>
+        )}
+      </div>
     );
   }
 
@@ -30,6 +40,7 @@ export function JoinForm() {
 
   return (
     <form action={action} noValidate className="grid gap-8">
+      <input type="hidden" name="idempotencyKey" value={key} />
       <label className="block">
         <span className="text-sm text-ash">Your name</span>
         <input name="name" autoComplete="name" defaultValue={v.name} aria-invalid={!!err.name} aria-describedby="name-error" className={field} />
@@ -43,22 +54,27 @@ export function JoinForm() {
       <fieldset>
         <legend className="text-sm text-ash">I want to join</legend>
         <div className="mt-3 flex flex-wrap gap-2">
-          {sessions.map((s) => (
+          {programs.map((s) => (
             <label key={s} className="cursor-pointer">
-              <input type="radio" name="session" value={s} defaultChecked={v.session === s} className="peer sr-only" />
+              <input type="radio" name="program" value={s} defaultChecked={v.program === s} className="peer sr-only" />
               <span className="block rounded-full border border-ash/60 px-4 py-2 peer-checked:border-brass peer-checked:bg-brass peer-checked:text-matte peer-focus-visible:outline-2 peer-focus-visible:outline-brass-light">
                 {s}
               </span>
             </label>
           ))}
         </div>
-        {error("session")}
+        {error("program")}
       </fieldset>
       <label className="block">
         <span className="text-sm text-ash">Anything we should know (optional)</span>
         <textarea name="message" rows={3} defaultValue={v.message} className={field} />
         {error("message")}
       </label>
+      {state.formError && (
+        <p role="alert" className="text-sm text-lamp">
+          {state.formError}
+        </p>
+      )}
       <button disabled={pending} className="btn btn-brass btn-action justify-self-start">
         {pending ? "Sending…" : "Send enquiry"}
         <span className="btn-icon">

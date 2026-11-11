@@ -4,6 +4,7 @@ import { JoinForm } from "./join-form";
 import { Arrow } from "./arrow";
 import { Motion } from "./motion";
 import { Pricing } from "./pricing";
+import { getJoinPrograms } from "./lib/programs";
 
 const h2 = "font-display text-6xl font-extrabold uppercase leading-[0.9] sm:text-8xl";
 const section = "px-4 py-24 sm:px-10 sm:py-32";
@@ -42,7 +43,8 @@ function Plate() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const joinPrograms = await getJoinPrograms();
   return (
     <>
       <Motion />
@@ -307,7 +309,7 @@ export default function Home() {
               Leave your number and we&apos;ll set a time to show you the floor and plan your first week.
             </p>
             <div className="mt-12">
-              <JoinForm />
+              <JoinForm programs={joinPrograms} />
             </div>
           </div>
           <div className="flex flex-col gap-8">
