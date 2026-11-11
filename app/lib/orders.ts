@@ -48,7 +48,9 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<Placed
 
   const merged = new Map<string, number>();
   let badQty = false;
+  let badVariant = false;
   for (const it of rawItems) {
+    if (typeof it?.variantId !== "string" || !isUuid(it.variantId)) { badVariant = true; continue; }
     if (!Number.isInteger(it?.quantity) || it.quantity < 1) { badQty = true; continue; }
     merged.set(it.variantId, (merged.get(it.variantId) ?? 0) + it.quantity);
   }
@@ -73,6 +75,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<Placed
   if (input.fulfilment !== "pickup" && !delivery) fields.items = "Invalid fulfilment.";
   if (delivery && !address) fields.address = "Enter a delivery address in Lahore.";
   if (rawItems.length === 0) fields.items = "Add at least one item.";
+  else if (badVariant) fields.items = "One of the items isn't valid.";
   else if (badQty) fields.items = "Quantities must be whole numbers of 1 or more.";
   else if (items.length > 20) fields.items = "Too many different items in one order (max 20).";
   if (Object.keys(fields).length) throw invalid(fields);

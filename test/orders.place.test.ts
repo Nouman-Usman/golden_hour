@@ -151,3 +151,13 @@ test("phone formats", async () => {
     e.code === "invalid_input" && !!e.fields?.customerPhone);
   await close();
 });
+
+test("non-UUID variantId is invalid_input, no order created", async () => {
+  const { db, close } = await createTestDb();
+  for (const variantId of ["nope", undefined as unknown as string, 5 as unknown as string]) {
+    await assert.rejects(placeOrder(db, base([{ variantId, quantity: 1 }])), (e: DomainError) =>
+      e.code === "invalid_input" && !!e.fields?.items);
+  }
+  assert.equal((await db.select().from(orders)).length, 0);
+  await close();
+});
