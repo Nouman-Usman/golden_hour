@@ -29,6 +29,16 @@ export function pushPayload(e: PushEvent): string {
   );
 }
 
+// The server POSTs to whatever endpoint is stored, so only real browser push services are allowed
+// (no internal hosts, no credentials, no custom ports). web-push does not follow redirects.
+const PUSH_HOSTS = ["fcm.googleapis.com", "updates.push.services.mozilla.com", "push.apple.com", "notify.windows.com"];
+
+export function isPushServiceUrl(url: URL): boolean {
+  if (url.username || url.password || url.port) return false;
+  const h = url.hostname.toLowerCase().replace(/\.$/, "");
+  return PUSH_HOSTS.some((d) => h === d || h.endsWith(`.${d}`));
+}
+
 const BASE64URL = /^[A-Za-z0-9_-]+={0,2}$/;
 const bad = (m: string): never => {
   throw new DomainError("invalid_input", m);
@@ -50,7 +60,9 @@ export async function savePushSubscription(
   } catch {
     // handled below
   }
-  if (!url || url.protocol !== "https:" || input.endpoint.length > 1000) bad("That notification address isn't valid.");
+  if (!url || url.protocol !== "https:" || input.endpoint.length > 1000 || !isPushServiceUrl(url)) {
+    bad("That notification address isn't valid.");
+  }
   for (const k of [input.p256dh, input.auth]) {
     if (typeof k !== "string" || !k || k.length > 200 || !BASE64URL.test(k)) bad("That notification key isn't valid.");
   }

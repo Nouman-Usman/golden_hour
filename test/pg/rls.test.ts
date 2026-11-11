@@ -58,7 +58,7 @@ test("event staff_user_id columns are FKs to staff; unknown staff id is rejected
     join information_schema.key_column_usage k using (constraint_name, table_schema)
     where tc.constraint_type = 'FOREIGN KEY' and k.column_name = 'staff_user_id'
     order by 1`;
-  assert.deepEqual(fks.map((r) => r.t), ["enquiry_events", "order_events"]);
+  assert.deepEqual(fks.map((r) => r.t), ["enquiry_events", "order_events", "push_subscriptions"]);
   const { variantId } = await seedProduct(c, { name: "FK", price: 1, stock: 1 });
   const o = await placeOrder(c, {
     idempotencyKey: newKey(), customerName: "Ali", customerPhone: "03214220245",

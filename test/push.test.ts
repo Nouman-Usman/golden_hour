@@ -8,7 +8,7 @@ import { deletePushSubscription, notifyStaff, pushPayload, savePushSubscription,
 import type { Db } from "../db/types.ts";
 
 const KEY = "BElp" + "a".repeat(80);
-const sub = (n: string) => ({ endpoint: `https://push.example/${n}`, p256dh: KEY, auth: "abcDEF123_-", userAgent: "test" });
+const sub = (n: string) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${n}`, p256dh: KEY, auth: "abcDEF123_-", userAgent: "test" });
 
 function fakeSender(results: Record<string, "ok" | "gone" | "failed"> = {}) {
   const sent: { endpoint: string; payload: string }[] = [];
@@ -28,12 +28,32 @@ test("save validates endpoint and keys", async () => {
   try {
     const me = await seedStaff(db, { role: "front_desk" });
     const bad = { code: "invalid_input" };
-    await assert.rejects(savePushSubscription(db, me, { ...sub("a"), endpoint: "http://push.example/a" }), bad);
-    await assert.rejects(savePushSubscription(db, me, { ...sub("a"), endpoint: `https://p.example/${"x".repeat(1000)}` }), bad);
+    await assert.rejects(savePushSubscription(db, me, { ...sub("a"), endpoint: "http://fcm.googleapis.com/a" }), bad);
+    await assert.rejects(savePushSubscription(db, me, { ...sub("a"), endpoint: `https://fcm.googleapis.com/${"x".repeat(1000)}` }), bad);
+    // SSRF: only real browser push services, no credentials, no custom ports
+    for (const endpoint of [
+      "https://169.254.169.254/latest/meta-data",
+      "https://localhost/push",
+      "https://internal.supabase.co/x",
+      "https://fcm.googleapis.com.evil.test/x",
+      "https://evilfcm.googleapis.com.attacker.io/x",
+      "https://user:pass@fcm.googleapis.com/x",
+      "https://fcm.googleapis.com:8443/x",
+    ]) {
+      await assert.rejects(savePushSubscription(db, me, { ...sub("a"), endpoint }), bad, endpoint);
+    }
+    for (const endpoint of [
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QAbc",
+      "https://wns2-db5p.notify.windows.com/w/?token=abc",
+      "https://FCM.googleapis.com./fcm/send/x",
+    ]) {
+      await savePushSubscription(db, me, { ...sub("a"), endpoint });
+    }
     await assert.rejects(savePushSubscription(db, me, { ...sub("a"), p256dh: "" }), bad);
     await assert.rejects(savePushSubscription(db, me, { ...sub("a"), auth: "not base64!" }), bad);
     await savePushSubscription(db, me, sub("a"));
-    assert.equal((await rows(db)).length, 1);
+    assert.equal((await rows(db)).length, 5);
   } finally {
     await close();
   }
