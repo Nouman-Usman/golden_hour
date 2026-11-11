@@ -15,6 +15,20 @@
       "when": 1794422427780,
       "tag": "0001_seed_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794424577463,
+      "tag": "0002_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794424577868,
+      "tag": "0003_seed_content",
+      "breakpoints": true
     }
   ]
 }
