@@ -1,3 +1,5 @@
+import { DomainError } from "./errors.ts";
+
 export type EnquiryInput = {
   idempotencyKey: string;
   name: string;
